@@ -1,7 +1,8 @@
 using LogParserWorkerService.Services.Contracts;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
-
+using LogParserWorkerService.Services.Interface;
+using LogParserWorkerService.Services.Concrete;
 namespace LogParserWorkerService
 {
     [ExcludeFromCodeCoverage]
@@ -11,12 +12,18 @@ namespace LogParserWorkerService
         private readonly ILogDataReader _logDataReader;
         private readonly ILogParser _logDataParser;
         private readonly IReportGenerator _reportGenerator;
-        public Worker(ILogger<Worker> logger, ILogDataReader logDataReader, ILogParser logDataParser, IReportGenerator reportGenerator)
+        private readonly IUpsertService _upsertService;
+        public Worker(ILogger<Worker> logger, 
+                ILogDataReader logDataReader, 
+                ILogParser logDataParser, 
+                IReportGenerator reportGenerator,
+                IUpsertService upsertService)
         {
             _logger = logger;
             _logDataReader = logDataReader;
             _logDataParser = logDataParser;
             _reportGenerator = reportGenerator;
+            _upsertService = upsertService;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -35,6 +42,10 @@ namespace LogParserWorkerService
                 await Task.WhenAll(tasks);
 
 
+                //Save parsed data to the database for futire reference
+                _upsertService.Save(stoppingToken);
+
+                //the below code should not be here, added just for reference.this should be go to UI project 
                 var result = await _reportGenerator.GenerateReportAsync(stoppingToken);
 
                 var sb = new StringBuilder();
